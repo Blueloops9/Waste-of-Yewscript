@@ -8,7 +8,7 @@ local function loadyewscript(Code)
     local CurrentLine=1
     local DoRun = true
 
-    local ForBuffer={}
+    local ForBuffer,IfBuffer={},{}
 
     local Variables={
         A={0},B={0},C={0},D={0},E={0},
@@ -29,7 +29,20 @@ local function loadyewscript(Code)
         ["Size'"]=function(Data)
             local VariableList,Location = GetValue(Data)
             return {#VariableList[Location]}
-        end
+        end,
+        ["Abs"]=function(Data)return {math.abs(Variables[Data][1])} end,
+        ["Acos"]=function(Data)return {math.acos(Variables[Data][1])} end,
+        ["Asin"]=function(Data)return {math.asin(Variables[Data][1])} end,
+        ["Atan"]=function(Data)return {math.atan(Variables[Data][1])} end,
+        ["Cos"]=function(Data)return {math.cos(Variables[Data][1])} end,
+        ["Cosh"]=function(Data)return {math.cosh(Variables[Data][1])} end,
+        ["Deg"]=function(Data)return {math.deg(Variables[Data][1])} end,
+        ["Rad"]=function(Data)return {math.rad(Variables[Data][1])} end,
+        ["Sin"]=function(Data)return {math.sin(Variables[Data][1])} end,
+        ["Sinh"]=function(Data)return {math.sinh(Variables[Data][1])} end,
+        ["Tan"]=function(Data)return {math.tan(Variables[Data][1])} end,
+        ["Tanh"]=function(Data)return {math.tanh(Variables[Data][1])} end,
+        --["Btan"]=function(Data)return {math.atan2(Variables[Data][1])} end,
     }
 
     local Operations={
