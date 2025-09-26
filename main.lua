@@ -8,7 +8,8 @@ local function loadyewscript(Code)
     local CurrentLine=1
     local DoRun = true
 
-    local ForBuffer,IfBuffer={},{}
+    local ifinit,Index={},1
+    local ForBuffer,IfBuffer,ElseBuffer,EndBuffer={},{},{},{}
 
     local Variables={
         A={0},B={0},C={0},D={0},E={0},
@@ -136,6 +137,32 @@ local function loadyewscript(Code)
             end
         end,
     }
+    local LogicOperations={
+        ["="]=function(A,B,C,D,Line)return function()
+            if tostringyew(A[B])~=tostringyew(C[D]) then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        ["!"]=function(A,B,C,D,Line)return function()
+            if tostringyew(A[B])==tostringyew(C[D]) then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        [">"]=function(A,B,C,D,Line)return function()
+            if not (A[B][1]>C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        ["<"]=function(A,B,C,D,Line)return function()
+            if not (A[B][1]<C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        ["}"]=function(A,B,C,D,Line)return function()
+            if not (A[B][1]>=C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        ["{"]=function(A,B,C,D,Line)return function()
+            if not (A[B][1]<=C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        ["]"]=function(A,B,C,D,Line)return function()
+            if tostringyew(A[B]):find(tostringyew(C[D])) ~= -1 then CurrentLine=IfBuffer[Line][2]end
+        end end,
+        ["["]=function(A,B,C,D,Line)return function()
+            if tostringyew(A[B]):find(tostringyew(C[D])) == -1 then CurrentLine=IfBuffer[Line][2]end
+        end end,
+    }
 
     function IsVariable(String)
         for I,_ in pairs(Variables) do if String:sub(1,#I)==I then return I,#I+1 end end
@@ -197,6 +224,11 @@ local function loadyewscript(Code)
                 Variables[Variable][Pos[PosLoc]=="" and #Variables[Variable]+1 or Pos[PosLoc]]=DatL[DatLoc]
             end
         end,
+        ["reset"]=function()return function()
+            ForBuffer={}
+            CurrentLine=0
+            for I,_ in Variables do Variables[I]=0 end
+        end end,
         ["for"]=function(Data)return function()
             ForBuffer[#ForBuffer+1] = {1,#Variables[Data],Variables[Data],CurrentLine}
             local a = Variables[Data][1]
@@ -213,7 +245,36 @@ local function loadyewscript(Code)
                 table.remove(ForBuffer,#ForBuffer)
             end
         end end,
+        ["if"]=function(Data)
+            ifinit[#ifinit+1] = Index
+
+            for I,V in pairs(LogicOperations) do
+                local Split = split(Data,I)
+                if Split[2] then
+                    local A,B = GetValue(Split[1])
+                    local C,D = GetValue(Split[2])
+                    --print(A,B,C,D,Index)
+                    return V(A,B,C,D,Index)
+                end
+            end
+        end,
+        ["else"]=function()
+            local Loc = ifinit[#ifinit]
+            IfBuffer[Loc]={Index,Index}
+            return function()
+                CurrentLine=IfBuffer[Loc][1]
+            end
+        end,
+        ["end"]=function()
+            if IfBuffer[ifinit[#ifinit]] then IfBuffer[ifinit[#ifinit]][1]=Index
+            else IfBuffer[ifinit[#ifinit]]={Index,Index}end
+            table.remove(ifinit,#ifinit)
+            return function() end
+        end,
     }
+    local InstructionArray={}
+    for I,_ in pairs(Instructions) do InstructionArray[#InstructionArray+1] = I end
+    table.sort(InstructionArray,function(a,b)return #a>#b end)-- Longest instruction gets checked first
 
     function GetValue(Data)
         local Keyword = IsKeyword(Data)
@@ -225,14 +286,18 @@ local function loadyewscript(Code)
         end
     end
     local function IsInstruction(String)
-        for I,_ in pairs(Instructions) do if String:sub(1,#I)==I then return I,#I+1 end end
+        for I,V in ipairs(InstructionArray) do if String:sub(1,#V)==V then return V,#V+1 end end
         return false
     end
 
     local Program={}
 
-    for _,V in pairs(split(Code,"/")) do
-        if V:sub(1,1)~="-" then
+    Code = table.concat(split(Code,"\n"))
+
+    for I,V in pairs(split(Code,"/")) do
+        local First = V:sub(1,1)
+        if V == "" then error("error at line "..I..": line cannot be empty!") end
+        if First~="-" then
             local Instruction,Start = IsInstruction(V)
             if Instruction then
                 print(Instruction,V:sub(Start))
@@ -244,7 +309,10 @@ local function loadyewscript(Code)
                     Program[#Program+1] = Operations[V:sub(Start,Start)](Variable,V:sub(Start+1))
                 end
             end
+        else
+            Program[#Program+1] = function() end
         end
+        Index=Index+1
     end
     
     local Length = #Program
@@ -253,7 +321,7 @@ local function loadyewscript(Code)
     end
 end
 
-local String=[[A=1;2;3;4;5;6;7;8;9;10/B=0/forA/B+Z/endloop/printB]]
+local String=[[A=1/B=1/ifA>B/printA/else/print-1/end]]
 
 local Time = os.clock()
 local YewScript = loadyewscript(String)
