@@ -180,6 +180,21 @@ local function loadyewscript(Code)
         else return Value end
     end
 
+    function GetValue(Data)
+        local Keyword = IsKeyword(Data)
+        if Keyword then return Keywords,Keyword
+        else
+            local Variable = IsVariable(Data)
+            if Variable then return Variables,Variable
+            else local A = tonumber(Data) return {A==nil and Data or A},1 end
+        end
+    end
+
+    function IsInstruction(String)
+        for I,V in ipairs(InstructionArray) do if String:sub(1,#V)==V then return V,#V+1 end end
+        return false
+    end
+
     local Instructions={
         ["goto"]=function(line)
             local List,Loc = GetValue(line)
@@ -272,23 +287,9 @@ local function loadyewscript(Code)
             return function() end
         end,
     }
-    local InstructionArray={}
+    InstructionArray={}
     for I,_ in pairs(Instructions) do InstructionArray[#InstructionArray+1] = I end
     table.sort(InstructionArray,function(a,b)return #a>#b end)-- Longest instruction gets checked first
-
-    function GetValue(Data)
-        local Keyword = IsKeyword(Data)
-        if Keyword then return Keywords,Keyword
-        else
-            local Variable = IsVariable(Data)
-            if Variable then return Variables,Variable
-            else local A = tonumber(Data) return {A==nil and Data or A},1 end
-        end
-    end
-    local function IsInstruction(String)
-        for I,V in ipairs(InstructionArray) do if String:sub(1,#V)==V then return V,#V+1 end end
-        return false
-    end
 
     local Program={}
 
@@ -300,12 +301,10 @@ local function loadyewscript(Code)
         if First~="-" then
             local Instruction,Start = IsInstruction(V)
             if Instruction then
-                print(Instruction,V:sub(Start))
                 Program[#Program+1] = Instructions[Instruction](V:sub(Start))
             else
                 local Variable,Start = IsVariable(V)
                 if Variable then
-                    print(Variable,V:sub(Start,Start),V:sub(Start+1))
                     Program[#Program+1] = Operations[V:sub(Start,Start)](Variable,V:sub(Start+1))
                 end
             end
