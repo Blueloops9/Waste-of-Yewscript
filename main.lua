@@ -25,10 +25,10 @@ local function loadyewscript(Code)
         ["Port"]=function()return {0} end,
         ["Buffer"]=function(Channel)return {0} end,
         ["RealTime"]=function() return {os.time()} end,
-        ["Length'"]=function(Variable) return #tostringyew(Variables[Variable]) end,
+        ["Length'"]=function(Variable) return {#tostringyew(Variables[Variable])} end,
         ["Size'"]=function(Data)
             local VariableList,Location = GetValue(Data)
-            return #VariableList[Location]
+            return {#VariableList[Location]}
         end
     }
 
@@ -106,6 +106,20 @@ local function loadyewscript(Code)
                 if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]/Variables[Variable][List[Loc]] end
                 else return function()Variables[A][1]=Variables[A][1]/Variables[Variable][1] end end
             else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]/E end
+            end
+        end,
+        ["^"]=function(A,B)
+            local Variable = IsVariable(B)local Keyword = IsKeyword(B)
+            if Keyword then
+                local KeywordReference,Split = Keywords[Keyword],split(B,"'")[2]
+                if Split then 
+                local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]^KeywordReference()[List[Loc]] end
+                else return function()Variables[A][1]=Variables[A][1]^KeywordReference()[1] end end
+            elseif Variable then
+                local Split = split(B,"'")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]^Variables[Variable][List[Loc]] end
+                else return function()Variables[A][1]=Variables[A][1]^Variables[Variable][1] end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]^E end
             end
         end,
     }
@@ -197,7 +211,6 @@ local function loadyewscript(Code)
             else local A = tonumber(Data) return {A==nil and Data or A},1 end
         end
     end
-
     local function IsInstruction(String)
         for I,_ in pairs(Instructions) do if String:sub(1,#I)==I then return I,#I+1 end end
         return false
