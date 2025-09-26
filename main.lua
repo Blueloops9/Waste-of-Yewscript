@@ -8,6 +8,8 @@ local function loadyewscript(Code)
     local CurrentLine=1
     local DoRun = true
 
+    local ForBuffer={}
+
     local Variables={
         A={0},B={0},C={0},D={0},E={0},
         F={0},G={0},H={0},I={0},J={0},
@@ -23,7 +25,11 @@ local function loadyewscript(Code)
         ["Port"]=function()return {0} end,
         ["Buffer"]=function(Channel)return {0} end,
         ["RealTime"]=function() return {os.time()} end,
-        ["Length"]=function(Variable) return {0} end,
+        ["Length'"]=function(Variable) return #tostringyew(Variables[Variable]) end,
+        ["Size'"]=function(Data)
+            local VariableList,Location = GetValue(Data)
+            return #VariableList[Location]
+        end
     }
 
     local Operations={
@@ -114,7 +120,7 @@ local function loadyewscript(Code)
         return false
     end
 
-    local function tostringyew(Value)
+    function tostringyew(Value)
         local Type = type(Value)
         if Type=="table" then return table.concat(Value,";")
         else return Value end
@@ -164,6 +170,22 @@ local function loadyewscript(Code)
                 Variables[Variable][Pos[PosLoc]=="" and #Variables[Variable]+1 or Pos[PosLoc]]=DatL[DatLoc]
             end
         end,
+        ["for"]=function(Data)return function()
+            ForBuffer[#ForBuffer+1] = {1,#Variables[Data],Variables[Data],CurrentLine}
+            local a = Variables[Data][1]
+            Variables.Z={tonumber(a)==nil and a or tonumber(a)}
+        end end,
+        ["endloop"]=function()return function()
+            local Loop = ForBuffer[#ForBuffer]
+            Loop[1]=Loop[1]+1
+            if Loop[1]<=Loop[2] then 
+                local a = Loop[3][Loop[1]]
+                Variables.Z = {tonumber(a)==nil and a or tonumber(a)}
+                CurrentLine=Loop[4]
+            else    
+                table.remove(ForBuffer,#ForBuffer)
+            end
+        end end,
     }
 
     function GetValue(Data)
@@ -205,7 +227,7 @@ local function loadyewscript(Code)
     end
 end
 
-local String=[[A=5;2/insertA'1'1/printA]]
+local String=[[A=1;2;3;4;5;6;7;8;9;10/B=0/forA/B+Z/endloop/printB]]
 
 local Time = os.clock()
 local YewScript = loadyewscript(String)
