@@ -130,7 +130,13 @@ local function loadyewscript(Code,ExtrasTable)
         [">"]=function(A,B)
             local BL,BLo = GetValue(B)
             return function()
-            --    if Variables[A][1] > BL[BLo][1]
+                if Variables[A][1] > BL[BLo][1] then Variables[A][1] = BL[BLo][1]end
+            end
+        end,
+        ["<"]=function(A,B)
+            local BL,BLo = GetValue(B)
+            return function()
+                if Variables[A][1] < BL[BLo][1] then Variables[A][1] = BL[BLo][1]end
             end
         end
     }
